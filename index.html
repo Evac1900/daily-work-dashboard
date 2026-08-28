@@ -1039,9 +1039,9 @@ function renderMood(){
   curMood=d.mood;curFatigue=d.fatigue||0;
   document.getElementById('moodRow').innerHTML=MOODS.map(m=>`<div class="mood ${curMood===m[0]?'on':''}" onclick="setMood('${m[0]}')"><span class="dot" style="background:${m[1]}"></span>${m[0]}</div>`).join('');
   document.getElementById('fatigueRow').innerHTML=[1,2,3,4,5].map(i=>`<div class="fd ${curFatigue===i?'on':''}" onclick="setFatigue(${i})">${['','轻松','较轻','一般','偏累','很累'][i]}</div>`).join('');
-  if(document.activeElement!==ta)ta.value=(d.diary&&!d.sample)?d.diary:'';
+  if(document.activeElement!==ta)ta.value=((d.diary||'').trim()&&!d.sample)?d.diary:'';
   const sv=document.getElementById('diarySave');
-  sv.textContent=(d.diary&&!d.sample)?('已保存 · '+ (d.updatedAt||'')):'';
+  sv.textContent=((d.diary||'').trim()&&!d.sample)?('已保存 · '+ (d.updatedAt||'')):'';
   if(document.getElementById('calModal').classList.contains('show'))renderCalendar();
 }
 function ensureDay(){if(!S.day[todayStr()])S.day[todayStr()]={mood:'',fatigue:0,diary:''};return S.day[todayStr()];}
@@ -1072,7 +1072,7 @@ function doSaveDiary(){
 let calY=new Date().getFullYear(),calM=new Date().getMonth(),calSel=null;
 function openCalendar(){const ta=document.getElementById('diaryText');const ed=(ta&&ta.dataset.editDate)||todayStr();saveDiaryNow();closeMoodModal();calSel=ed;document.getElementById('calModal').classList.add('show');renderCalendar();}
 function closeCalendar(){document.getElementById('calModal').classList.remove('show');}
-function openMoodModal(){const ta=document.getElementById('diaryText');ta.dataset.editDate='';const td=todayStr();ta.value=(S.day[td]&&!S.day[td].sample?S.day[td].diary||'':'');document.getElementById('moodModal').classList.add('show');renderMood();}
+function openMoodModal(){const ta=document.getElementById('diaryText');ta.dataset.editDate='';const td=todayStr();ta.value=(S.day[td]&&!S.day[td].sample&&((S.day[td].diary||'').trim()))?S.day[td].diary:'';document.getElementById('moodModal').classList.add('show');renderMood();}
 function closeMoodModal(){document.getElementById('moodModal').classList.remove('show');if(document.getElementById('calModal').classList.contains('show'))renderCalendar();}
 function calPrev(){calM--;if(calM<0){calM=11;calY--;}renderCalendar();}
 function calNext(){calM++;if(calM>11){calM=0;calY++;}renderCalendar();}
@@ -1085,7 +1085,7 @@ function renderCalendar(){
   for(let i=0;i<firstDay;i++)cells+='<div class="cc empty"></div>';
   for(let d=1;d<=days;d++){
     const ds=calY+'-'+pad(calM+1)+'-'+pad(d);
-    const e=S.day[ds];const isReal=e&&!e.sample&&(e.diary||e.mood);
+    const e=S.day[ds];const isReal=e&&!e.sample&&(((e.diary||'').trim())||e.mood);
     const isToday=ds===todayStr();
     cells+=`<div class="cc ${isReal?'has':''} ${isToday?'today':''} ${ds===calSel?'sel':''}" onclick="selectDay('${ds}')"><span class="dn">${d}</span>${isReal?'<span class="ddot"></span>':''}</div>`;
   }
@@ -1096,7 +1096,7 @@ function renderCalendar(){
     const e=S.day[calSel];
     const mood=e&&e.mood?e.mood:'';
     const fl=e&&e.fatigue?['','轻松','较轻','一般','偏累','很累'][e.fatigue]:'';
-    const hasDiary=e&&e.diary&&!e.sample;
+    const hasDiary=e&&((e.diary||'').trim())&&!e.sample;
     let top=calSel;
     if(mood)top+=' · 心情 '+mood;
     if(fl)top+=' · 疲惫 '+fl;

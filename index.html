@@ -288,6 +288,39 @@ if('serviceWorker' in navigator){
   .supp.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600;}
   .supp.on::after{content:" ✓";}
   .supp.opp{position:relative;}
+  /* 点评模块 */
+  .rev-fchips{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;}
+  .rev-fc{padding:5px 13px;border:1px solid var(--line);border-radius:30px;font-size:12.5px;cursor:pointer;background:transparent;color:var(--sub);user-select:none;transition:.12s;font-family:inherit;line-height:1.4;}
+  .rev-fc:hover{border-color:var(--accent);}
+  .rev-fc.on{background:var(--ink);color:#fff;border-color:var(--ink);font-weight:600;}
+  .rev-fc.hang.on{background:#d12945;border-color:#d12945;}
+  .rev-fc.la.on{background:#2e8b57;border-color:#2e8b57;}
+  .rev-item{border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin-bottom:10px;background:var(--card);}
+  .rev-item .rt{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .rev-item .rt b{font-size:15px;}
+  .rev-item .rc{background:var(--soft);color:var(--sub);padding:2px 9px;border-radius:20px;font-size:11px;}
+  .rev-item .rd{font-size:12px;color:var(--sub);margin-left:auto;}
+  .rev-item .rbx{font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:3px;border-radius:20px;padding:2px 10px;}
+  .rev-item .rbx svg{width:13px;height:13px;}
+  .rev-hang{color:#d12945;background:rgba(209,41,69,.1);border:1px solid rgba(209,41,69,.3);}
+  .rev-la{color:#2e8b57;background:rgba(46,139,87,.1);border:1px solid rgba(46,139,87,.3);}
+  .rev-item .rtext{font-size:13.5px;color:var(--ink);margin-top:8px;line-height:1.65;white-space:pre-wrap;}
+  .rev-item .rops{margin-top:8px;display:flex;gap:8px;font-size:11px;color:var(--sub);}
+  .rev-item .rops span{cursor:pointer;}
+  .rev-item .rops span:hover{color:var(--red);}
+  .rev-egg{border:1px dashed var(--accent);background:var(--accent-soft);border-radius:16px;padding:16px 18px;margin-bottom:16px;animation:fade .5s;}
+  .rev-egg .et{font-size:13px;font-weight:700;color:var(--ink);display:flex;align-items:center;gap:6px;margin-bottom:8px;letter-spacing:.5px;}
+  .rev-egg .ec{font-size:13px;color:var(--ink);line-height:1.6;}
+  .rev-egg .ec b{font-weight:700;}
+  .badge-row{display:flex;gap:8px;align-items:center;}
+  .badge-pick{padding:6px 16px;border:1px solid var(--line);border-radius:30px;font-size:13px;cursor:pointer;background:transparent;color:var(--sub);font-family:inherit;display:inline-flex;align-items:center;gap:4px;transition:.12s;}
+  .badge-pick svg{width:14px;height:14px;}
+  .badge-pick.on.hang{background:#d12945;border-color:#d12945;color:#fff;font-weight:600;}
+  .badge-pick.on.la{background:#2e8b57;border-color:#2e8b57;color:#fff;font-weight:600;}
+  .tab.notify{position:relative;}
+  .tab.notify::after{content:'';position:absolute;top:8px;right:12px;width:8px;height:8px;border-radius:50%;background:var(--red);}
+  #bnav button.notify{position:relative;}
+  #bnav button.notify::after{content:'';position:absolute;top:5px;right:calc(50% - 20px);width:8px;height:8px;border-radius:50%;background:var(--red);}
   .banner{margin-bottom:16px;padding:14px 18px;border-radius:16px;background:var(--accent-soft);color:#7a4a28;font-size:14px;display:none;}
   .banner.show{display:block;}
   /* 底部Tab */
@@ -363,6 +396,7 @@ if('serviceWorker' in navigator){
       <button class="tab" data-t="ex" onclick="switchTab('ex')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="3" height="12" rx="1"/><rect x="18" y="6" width="3" height="12" rx="1"/><rect x="6" y="9" width="12" height="6" rx="1.5"/></svg>运动</button>
       <button class="tab" data-t="media" onclick="switchTab('media')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3z"/></svg>观影读书</button>
       <button class="tab" data-t="health" onclick="switchTab('health')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z"/><path d="M12 9v4M10 11h4"/></svg>健康追踪</button>
+      <button class="tab" data-t="reviews" onclick="switchTab('reviews')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.8L6.6 19.6l1-6L3.3 9.4l6-.9z"/></svg>点评</button>
     </nav>
     <div class="side-foot">
       <button class="gear" onclick="cloudSync()"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3v18M8 16l4 4 4-4M8 8l4-4 4 4"/></svg>同步<span style="display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:auto;background:var(--line)" id="syncDot"></span></button>
@@ -565,6 +599,34 @@ if('serviceWorker' in navigator){
       </div>
     </section>
 
+    <!-- 点评 -->
+    <section class="tabpane" id="pane-reviews">
+      <div id="revEgg"></div>
+      <div class="card">
+        <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.8L6.6 19.6l1-6L3.3 9.4l6-.9z"/></svg>写点评 <span class="hint" style="margin:0;font-weight:400">书 · 饭 · 游戏 · 影视…</span></h3>
+        <div class="row">
+          <input id="rvTitle" placeholder="对象名称，如：三体 / 海底捞 / 塞尔达" style="flex:3;min-width:160px">
+          <select id="rvCat" style="flex:1;min-width:80px"></select>
+          <input id="rvDate" type="date" style="flex:1.2;min-width:110px">
+        </div>
+        <div class="field"><label style="font-size:12px;color:var(--sub);margin-bottom:6px;display:block">评价（可选，不想评就不点）</label>
+          <div class="badge-row" id="rvBadgeRow">
+            <button type="button" class="badge-pick" data-b="" onclick="pickRevBadge('')">随感</button>
+            <button type="button" class="badge-pick hang" data-b="夯" onclick="pickRevBadge('夯')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 11v9M7 11l4-7c1.5 0 3 1.2 3 3l-.5 3H19a2 2 0 012 2l-1.5 6A2 2 0 0117.5 20H7"/></svg>夯</button>
+            <button type="button" class="badge-pick la" data-b="拉" onclick="pickRevBadge('拉')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 13V4m0 9l4 7c1.5 0 3-1.2 3-3l-.5-3H19a2 2 0 001-2l-1.5-6A2 2 0 0017.5 4H7"/></svg>拉</button>
+          </div>
+        </div>
+        <div class="field"><textarea id="rvText" rows="3" placeholder="想说的话…（可空，光打个夯/拉也行）"></textarea></div>
+        <button class="btn accent wide" onclick="revAdd()">保存点评</button>
+      </div>
+      <div class="card">
+        <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>我的点评</h3>
+        <input id="rvSearch" placeholder="🔍 搜标题 / 内容 / 分类" style="width:100%;margin-bottom:10px" oninput="revQ=this.value;renderRevList()">
+        <div class="rev-fchips" id="rvFilter"></div>
+        <div id="revList"></div>
+      </div>
+    </section>
+
     <div class="footer-note">数据仅保存在本机浏览器 · 建议定期备份</div>
   </main>
 </div>
@@ -576,6 +638,7 @@ if('serviceWorker' in navigator){
   <button data-t="ex" onclick="switchTab('ex')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="6" width="3" height="12" rx="1"/><rect x="18" y="6" width="3" height="12" rx="1"/><rect x="6" y="9" width="12" height="6" rx="1.5"/></svg>运动</button>
   <button data-t="media" onclick="switchTab('media')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M10 9l5 3-5 3z"/></svg>观影</button>
   <button data-t="health" onclick="switchTab('health')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-4.5-7-10a4 4 0 017-2.6A4 4 0 0119 11c0 5.5-7 10-7 10z"/><path d="M12 9v4M10 11h4"/></svg>健康</button>
+  <button data-t="reviews" onclick="switchTab('reviews')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2.7 5.5 6 .9-4.3 4.2 1 6-5.4-2.8L6.6 19.6l1-6L3.3 9.4l6-.9z"/></svg>点评</button>
 </nav>
 
 <div class="mask" id="mask" onclick="closeDrawer()"></div>
@@ -671,7 +734,7 @@ if('serviceWorker' in navigator){
 <script>
 /* ============ 存储 ============ */
 const PREFIX='wb_daily_';
-const K={diet:PREFIX+'diet',ex:PREFIX+'exercise',tasks:PREFIX+'tasks',notes:PREFIX+'notes',media:PREFIX+'media',health:PREFIX+'health',day:PREFIX+'day',flags:PREFIX+'flags',set:PREFIX+'settings'};
+const K={diet:PREFIX+'diet',ex:PREFIX+'exercise',tasks:PREFIX+'tasks',notes:PREFIX+'notes',media:PREFIX+'media',health:PREFIX+'health',day:PREFIX+'day',flags:PREFIX+'flags',set:PREFIX+'settings',reviews:PREFIX+'reviews',revcats:PREFIX+'revcats'};
 const pad=n=>String(n).padStart(2,'0');
 const fmt=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
 const todayStr=()=>fmt(new Date());
@@ -690,7 +753,9 @@ let S={
   health:load(K.health,null),
   day:load(K.day,{}),
   flags:load(K.flags,null),
-  set:load(K.set,{target:1800,exGoal:30,aiKey:'',theme:'mint'})
+  set:load(K.set,{target:1800,exGoal:30,aiKey:'',theme:'mint'}),
+  reviews:load(K.reviews,null),
+  revcats:load(K.revcats,null)
 };
 if(S.diet===null){
   S.diet=[
@@ -730,6 +795,14 @@ if(S.media===null){
   ];save(K.media,S.media);
 }
 if(S.flags===null){S.flags={exercise:dayBefore(2),diet:yestStr(),news:todayStr()};save(K.flags,S.flags);}
+if(S.revcats===null){S.revcats=[];save(K.revcats,S.revcats);}
+if(S.reviews===null){
+  S.reviews=[
+    {id:'rv1',date:yestStr(),title:'示例：塞尔达传说 王国之泪',cat:'游戏',badge:'夯',text:'开放世界设计的天花板，地下和天空两层地图都塞满了惊喜，100小时还没腻。'},
+    {id:'rv2',date:dayBefore(3),title:'示例：公司楼下的兰州拉面',cat:'美食',badge:'拉',text:'面坨了汤也温的，二细变粗面，不会再去第二次。'},
+    {id:'rv3',date:dayBefore(6),title:'示例：《漫长的季节》',cat:'影视',badge:'夯',text:'剧本、表演、配乐全部在线，结尾那场雪封神，想二刷。'}
+  ];save(K.reviews,S.reviews);
+}
 if(!S.day[todayStr()]){S.day[todayStr()]={mood:'平静',fatigue:3,diary:'示例：今天工作进展顺利，下午有点累。',sample:1};save(K.day,S.day);}
 
 /* ============ 国内食物成分库 (kcal/100g, 蛋白质g/100g, 默认份量g) ============ */
@@ -1021,12 +1094,13 @@ async function aiEstimate(text){
 }
 
 /* ============ Tab ============ */
-const TITLES={overview:'概览',today:'日程任务',diet:'饮食',ex:'运动',media:'观影读书',health:'健康追踪'};
+const TITLES={overview:'概览',today:'日程任务',diet:'饮食',ex:'运动',media:'观影读书',health:'健康追踪',reviews:'点评'};
 function switchTab(t){
   document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('on',p.id==='pane-'+t));
   document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   document.querySelectorAll('#bnav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
   document.getElementById('topTitle').textContent=TITLES[t];
+  if(t==='reviews')setRevNotify(false);
 }
 
 /* ============ 今日任务 + 心情 + 日记 ============ */
@@ -1806,8 +1880,127 @@ function renderDietBanner(){
     el.style.display='none';
   }
 }
+/* ============ 点评模块 ============ */
+const REV_PRESET_CATS=['书籍','美食','游戏','影视','其他'];
+const THUMB_UP='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 11v9M7 11l4-7c1.5 0 3 1.2 3 3l-.5 3H19a2 2 0 012 2l-1.5 6A2 2 0 0117.5 20H7"/></svg>';
+const THUMB_DN='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M7 13V4m0 9l4 7c1.5 0 3-1.2 3-3l-.5-3H19a2 2 0 001-2l-1.5-6A2 2 0 0017.5 4H7"/></svg>';
+let revQ='',revCatF='全部',revBadgeF='全部',rvBadgePick='',revSeq=0;
+function revAllCats(){return REV_PRESET_CATS.concat(S.revcats||[]);}
+function pickRevBadge(b){rvBadgePick=b;document.querySelectorAll('#rvBadgeRow .badge-pick').forEach(el=>el.classList.toggle('on',el.dataset.b===b));}
+function revRenderCatSelect(){
+  const sel=document.getElementById('rvCat');if(!sel)return;
+  const cur=sel.value;
+  sel.innerHTML=revAllCats().map(c=>`<option>${esc(c)}</option>`).join('');
+  if(cur&&revAllCats().includes(cur))sel.value=cur;
+}
+function revAddCat(){
+  const c=prompt('新增分类名称（如：咖啡店、播客、展览）');
+  if(c===null)return;
+  const name=c.trim().slice(0,8);
+  if(!name)return;
+  if(revAllCats().includes(name)){alert('该分类已存在');return;}
+  S.revcats.push(name);save(K.revcats,S.revcats);autoPush();
+  revRenderCatSelect();document.getElementById('rvCat').value=name;
+  revCatF=name;renderRevFilter();renderRevList();
+}
+function revDelCat(name){
+  if(S.reviews.some(r=>r.cat===name)){alert('该分类下还有点评，不能删除');return;}
+  if(!confirm('删除分类「'+name+'」？'))return;
+  S.revcats=S.revcats.filter(c=>c!==name);save(K.revcats,S.revcats);autoPush();
+  if(revCatF===name)revCatF='全部';
+  revRenderCatSelect();renderRevFilter();renderRevList();
+}
+function revAdd(){
+  const title=document.getElementById('rvTitle').value.trim();
+  if(!title){alert('先写一下点评的对象名称');return;}
+  S.reviews.push({
+    id:Date.now()+'-'+(++revSeq),
+    date:document.getElementById('rvDate').value||todayStr(),
+    title:title.slice(0,60),
+    cat:document.getElementById('rvCat').value,
+    badge:rvBadgePick,
+    text:document.getElementById('rvText').value.trim().slice(0,2000)
+  });
+  save(K.reviews,S.reviews);autoPush();
+  document.getElementById('rvTitle').value='';
+  document.getElementById('rvText').value='';
+  document.getElementById('rvDate').value=todayStr();
+  pickRevBadge('');
+  renderRevList();renderRevFilter();
+}
+function revDel(id){
+  if(!confirm('删除这条点评？'))return;
+  S.reviews=S.reviews.filter(r=>String(r.id)!==String(id));
+  save(K.reviews,S.reviews);autoPush();
+  renderRevList();renderRevFilter();renderRevEgg();
+}
+function revBadgeHtml(b){
+  if(b==='夯')return `<span class="rbx rev-hang">${THUMB_UP}夯 · 推荐</span>`;
+  if(b==='拉')return `<span class="rbx rev-la">${THUMB_DN}拉 · 不推荐</span>`;
+  return '';
+}
+function renderRevFilter(){
+  const el=document.getElementById('rvFilter');if(!el)return;
+  let h='';
+  h+=`<span class="rev-fc ${revBadgeF==='全部'?'on':''}" onclick="setRevBF('全部')">全部评价</span>`;
+  h+=`<span class="rev-fc hang ${revBadgeF==='夯'?'on':''}" onclick="setRevBF('夯')">夯（推荐）</span>`;
+  h+=`<span class="rev-fc la ${revBadgeF==='拉'?'on':''}" onclick="setRevBF('拉')">拉（不推荐）</span>`;
+  h+='<span style="width:100%;height:1px;background:var(--line);margin:2px 0"></span>';
+  ['全部'].concat(revAllCats()).forEach(c=>{
+    const n=c==='全部'?S.reviews.length:S.reviews.filter(r=>r.cat===c).length;
+    const isCustom=S.revcats.includes(c);
+    h+=`<span class="rev-fc ${revCatF===c?'on':''}" onclick="setRevCF('${esc(c)}')">${esc(c)}${n?' '+n:''}${(isCustom&&!n)?`<i style="font-style:normal;margin-left:4px;color:var(--red)" onclick="event.stopPropagation();revDelCat('${esc(c)}')" title="删除空分类">×</i>`:''}</span>`;
+  });
+  h+=`<span class="rev-fc" style="border-style:dashed" onclick="revAddCat()">＋ 新增分类</span>`;
+  el.innerHTML=h;
+}
+function setRevBF(b){revBadgeF=b;renderRevFilter();renderRevList();}
+function setRevCF(c){revCatF=c;renderRevFilter();renderRevList();}
+function renderRevList(){
+  const el=document.getElementById('revList');if(!el)return;
+  const q=revQ.trim().toLowerCase();
+  let list=S.reviews.slice();
+  if(q)list=list.filter(r=>(r.title+' '+r.text+' '+r.cat).toLowerCase().includes(q));
+  if(revBadgeF!=='全部')list=list.filter(r=>r.badge===revBadgeF);
+  if(revCatF!=='全部')list=list.filter(r=>r.cat===revCatF);
+  list.sort((a,b)=>(a.date<b.date?1:a.date>b.date?-1:(b.id-a.id)));
+  if(!list.length){
+    el.innerHTML=`<div class="hint" style="text-align:center;padding:18px 0">${S.reviews.length?'没有符合条件的点评':'还没有点评，写下第一条吧 ✨'}</div>`;
+    return;
+  }
+  el.innerHTML=list.map(r=>`<div class="rev-item">
+    <div class="rt"><b>${esc(r.title)}</b><span class="rc">${esc(r.cat)}</span>${revBadgeHtml(r.badge)}<span class="rd">${r.date}</span></div>
+    ${r.text?`<div class="rtext">${esc(r.text)}</div>`:''}
+    <div class="rops"><span onclick="revDel('${r.id}')">删除</span></div>
+  </div>`).join('');
+}
+/* 去年今日彩蛋：检测到去年同日有内容才出现 */
+function lastYearToday(){const n=new Date();return (n.getFullYear()-1)+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());}
+function renderRevEgg(){
+  const el=document.getElementById('revEgg');if(!el)return;
+  const ds=lastYearToday();
+  const rv=S.reviews.filter(r=>r.date===ds);
+  const day=S.day[ds];
+  const diary=(day&&(day.diary||'').trim()&&!day.sample)?day.diary.trim():'';
+  const mood=(day&&day.mood&&!day.sample)?day.mood:'';
+  const md=S.media.filter(m=>m.start===ds&&!m.sample);
+  const parts=[];
+  if(rv.length)parts.push(rv.map(r=>`<div class="ec" style="margin-bottom:6px">${revBadgeHtml(r.badge)} <b>${esc(r.title)}</b><span style="color:var(--sub)">（${esc(r.cat)}）</span>${r.text?'<br>'+esc(r.text.length>140?r.text.slice(0,140)+'…':r.text):''}</div>`).join(''));
+  if(diary)parts.push(`<div class="ec" style="margin-bottom:6px"><b>📖 当天的日记：</b>${esc(diary.length>140?diary.slice(0,140)+'…':diary)}${mood?'<span style="color:var(--sub)">（心情：'+esc(mood)+'）</span>':''}</div>`);
+  if(md.length)parts.push(`<div class="ec"><b>🎬 当天开始${md.length>1?'的'+md.length+'个':'：'}${esc(md[0].name)}</b>${md.length>1?'等':''}（${esc(md[0].type)}）</div>`);
+  if(!parts.length){el.innerHTML='';setRevNotify(false);return;}
+  el.innerHTML=`<div class="rev-egg"><div class="et">🎁 去年今日 · ${ds}</div>${parts.join('')}</div>`;
+  setRevNotify(true);
+}
+function setRevNotify(on){document.querySelectorAll('[data-t="reviews"]').forEach(b=>b.classList.toggle('notify',on));}
+function renderReviews(){
+  revRenderCatSelect();
+  const dEl=document.getElementById('rvDate');
+  if(dEl&&!dEl.value)dEl.value=todayStr();
+  renderRevEgg();renderRevFilter();renderRevList();
+}
 function exportJSON(){
-  const data={_type:'daily_workbench_v5',exported:todayStr(),diet:S.diet,exercise:S.ex,tasks:S.tasks,notes:S.notes,media:S.media,health:S.health,day:S.day,flags:S.flags,settings:S.set};
+  const data={_type:'daily_workbench_v6',exported:todayStr(),diet:S.diet,exercise:S.ex,tasks:S.tasks,notes:S.notes,media:S.media,health:S.health,day:S.day,flags:S.flags,settings:S.set,reviews:S.reviews,revcats:S.revcats};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='日常管理台_'+todayStr()+'.json';a.click();
 }
@@ -1815,24 +2008,24 @@ function importJSON(e){
   const f=e.target.files[0];if(!f)return;const r=new FileReader();
   r.onload=()=>{try{const d=JSON.parse(r.result);
     if(confirm('导入将覆盖当前数据，确定？')){
-      if(d.diet)S.diet=d.diet;if(d.exercise)S.ex=d.exercise;if(d.tasks)S.tasks=d.tasks;if(d.notes)S.notes=d.notes;if(d.media)S.media=d.media;if(d.health)S.health=d.health;if(d.day)S.day=d.day;if(d.flags)S.flags=d.flags;if(d.settings)S.set=d.settings;
-      save(K.diet,S.diet);save(K.ex,S.ex);save(K.tasks,S.tasks);save(K.notes,S.notes);save(K.media,S.media);save(K.health,S.health);save(K.day,S.day);save(K.flags,S.flags);save(K.set,S.set);
+      if(d.diet)S.diet=d.diet;if(d.exercise)S.ex=d.exercise;if(d.tasks)S.tasks=d.tasks;if(d.notes)S.notes=d.notes;if(d.media)S.media=d.media;if(d.health)S.health=d.health;if(d.day)S.day=d.day;if(d.flags)S.flags=d.flags;if(d.settings)S.set=d.settings;if(d.reviews)S.reviews=d.reviews;if(d.revcats)S.revcats=d.revcats;
+      save(K.diet,S.diet);save(K.ex,S.ex);save(K.tasks,S.tasks);save(K.notes,S.notes);save(K.media,S.media);save(K.health,S.health);save(K.day,S.day);save(K.flags,S.flags);save(K.set,S.set);save(K.reviews,S.reviews);save(K.revcats,S.revcats);
       boot();alert('导入成功');}
   }catch(err){alert('文件格式错误');}};
   r.readAsText(f);e.target.value='';
 }
 function clearSample(){
   if(!confirm('清空示例数据？'))return;
-  S.diet=S.diet.filter(d=>!d.sample);S.ex=S.ex.filter(e=>!e.sample);S.tasks=S.tasks.filter(t=>!t.sample);S.notes=S.notes.filter(n=>!n.sample);S.media=S.media.filter(m=>!m.sample);S.health=S.health.filter(h=>!h.sample);
+  S.diet=S.diet.filter(d=>!d.sample);S.ex=S.ex.filter(e=>!e.sample);S.tasks=S.tasks.filter(t=>!t.sample);S.notes=S.notes.filter(n=>!n.sample);S.media=S.media.filter(m=>!m.sample);S.health=S.health.filter(h=>!h.sample);S.reviews=S.reviews.filter(r=>!r.sample);
   for(const k in S.day){if(S.day[k].sample)delete S.day[k];}
-  save(K.diet,S.diet);save(K.ex,S.ex);save(K.tasks,S.tasks);save(K.notes,S.notes);save(K.media,S.media);save(K.health,S.health);save(K.day,S.day);
+  save(K.diet,S.diet);save(K.ex,S.ex);save(K.tasks,S.tasks);save(K.notes,S.notes);save(K.media,S.media);save(K.health,S.health);save(K.day,S.day);save(K.reviews,S.reviews);
   renderAll();alert('示例已清空');
 }
 function clearAll(){
   if(!confirm('确定清空全部数据？建议先导出备份！'))return;
   if(!confirm('再次确认：所有任务、速记、饮食、运动、观影、日记将被删除。'))return;
-  [K.diet,K.ex,K.tasks,K.notes,K.media,K.health,K.day,K.flags].forEach(k=>localStorage.removeItem(k));
-  S.diet=[];S.ex=[];S.tasks=[];S.notes=[];S.media=[];S.health=[];S.day={};S.flags={exercise:null,diet:null,news:null};
+  [K.diet,K.ex,K.tasks,K.notes,K.media,K.health,K.day,K.flags,K.reviews,K.revcats].forEach(k=>localStorage.removeItem(k));
+  S.diet=[];S.ex=[];S.tasks=[];S.notes=[];S.media=[];S.health=[];S.day={};S.flags={exercise:null,diet:null,news:null};S.reviews=[];S.revcats=[];
   renderAll();alert('已清空');
 }
 function openDrawer(){document.getElementById('setTarget').value=S.set.target;document.getElementById('setExGoal').value=S.set.exGoal;document.getElementById('setAIKey').value=S.set.aiKey||'';document.getElementById('syncShow').value=localStorage.getItem(CLOUD_KEY)||'(未同步)';renderThemes();document.getElementById('mask').classList.add('show');document.getElementById('drawer').classList.add('show');}
@@ -1894,7 +2087,7 @@ function renderThemes(){
 /* ============ 云同步(jsonblob) ============ */
 const CLOUD_KEY='wb_cloud_id';const CLOUD_VER='wb_cloud_ver';
 let _syncBusy=false;
-function cloudPayload(){return{diet:S.diet,ex:S.ex,tasks:S.tasks,notes:S.notes,media:S.media,health:S.health,day:S.day,flags:S.flags,ver:parseInt(localStorage.getItem(CLOUD_VER)||'0')+1};}
+function cloudPayload(){return{diet:S.diet,ex:S.ex,tasks:S.tasks,notes:S.notes,media:S.media,health:S.health,day:S.day,flags:S.flags,reviews:S.reviews,revcats:S.revcats,ver:parseInt(localStorage.getItem(CLOUD_VER)||'0')+1};}
 async function cloudPush(){
   if(_syncBusy)return;_syncBusy=true;
   try{
@@ -1917,8 +2110,9 @@ async function cloudPull(){
       if(d.diet)S.diet=d.diet;if(d.ex)S.ex=d.ex;if(d.tasks)S.tasks=d.tasks;
       if(d.notes)S.notes=d.notes;if(d.media)S.media=d.media;if(d.health)S.health=d.health;
       if(d.day)S.day=d.day;if(d.flags)S.flags=d.flags;
+      if(d.reviews)S.reviews=d.reviews;if(d.revcats)S.revcats=d.revcats;
       save(K.diet,S.diet);save(K.ex,S.ex);save(K.tasks,S.tasks);save(K.notes,S.notes);
-      save(K.media,S.media);save(K.health,S.health);save(K.day,S.day);save(K.flags,S.flags);
+      save(K.media,S.media);save(K.health,S.health);save(K.day,S.day);save(K.flags,S.flags);save(K.reviews,S.reviews);save(K.revcats,S.revcats);
       localStorage.setItem(CLOUD_VER,String(d.ver));renderAll();
     }
     setSyncDot('ok');
@@ -1937,7 +2131,7 @@ function checkBanner(){
   const b=document.getElementById('banner');
   if(n>=30){b.className='banner show';b.textContent='数据已积累 '+n+' 条，建议到「设置」里导出备份。';}
 }
-function renderAll(){renderOverview();renderToday();renderMood();renderDiet();renderEx();renderMedia();renderHealth();checkBanner();}
+function renderAll(){renderOverview();renderToday();renderMood();renderDiet();renderEx();renderMedia();renderHealth();renderReviews();checkBanner();}
 function boot(){
   const n=new Date();const ds=fmt(n);
   const wd=['周日','周一','周二','周三','周四','周五','周六'][n.getDay()];

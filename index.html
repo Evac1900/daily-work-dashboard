@@ -453,6 +453,7 @@ if('serviceWorker' in navigator){
         <div id="dietStat"></div>
         <div class="hint"><span id="dietDateLabel">今日累计</span>：<b id="dietTotal">0</b> / <span id="targetKcal">1800</span> kcal · 蛋白质 <b id="dietProt">0</b> g</div>
         <ul class="list" id="dietList"></ul>
+        <div id="dietSupps"></div>
         <div class="card" style="margin-top:18px">
           <h3><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>月度摄入视图</h3>
           <div class="dm-nav">
@@ -1432,6 +1433,7 @@ function renderDiet(){
   if(dlbl)dlbl.textContent=dietEditDate?(dietEditDate+' 累计'):'今日累计';
   const pct=Math.min(100,Math.round(total/Math.max(1,S.set.target)*100));
   const over=total>S.set.target;
+  renderDietSupps();
   const C=2*Math.PI*32;
   const dateLabel=dietEditDate?dietEditDate+' · ':'';
   document.getElementById('dietStat').innerHTML=`
@@ -1515,10 +1517,12 @@ function dietDayDetail(ds){
   if(!ds.startsWith(dietMonthPrefix()))return;
   const ORDER={'早餐':1,'午餐':2,'晚餐':3,'加餐':4};
   const items=S.diet.filter(d=>d.date===ds).sort((a,b)=>(ORDER[a.meal]||9)-(ORDER[b.meal]||9));
-  if(!items.length){el.innerHTML='';return;}
+  const supps=suppsOf(ds);
+  if(!items.length&&!supps.length){el.innerHTML='';return;}
   const k=items.reduce((s,d)=>s+d.kcal,0),p=items.reduce((s,d)=>s+(d.protein||0),0);
-  el.innerHTML=`<div class="dm-head">${ds} · 合计 ${k} kcal / 蛋白 ${Math.round(p*10)/10} g${k>S.set.target?' <span style="color:#d66a5f">（超目标）</span>':''}</div>`+
-    items.map(d=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dashed var(--line)"><span>${esc(d.meal)} · ${esc(d.text)}</span><span style="white-space:nowrap">${d.kcal} kcal · p${Math.round((d.protein||0)*10)/10}g</span></div>`).join('');
+  el.innerHTML=`<div class="dm-head">${ds}${items.length?` · 合计 ${k} kcal / 蛋白 ${Math.round(p*10)/10} g${k>S.set.target?' <span style="color:#d66a5f">（超目标）</span>':''}`:''}</div>`+
+    items.map(d=>`<div style="display:flex;justify-content:space-between;gap:10px;padding:3px 0;border-bottom:1px dashed var(--line)"><span>${esc(d.meal)} · ${esc(d.text)}</span><span style="white-space:nowrap">${d.kcal} kcal · p${Math.round((d.protein||0)*10)/10}g</span></div>`).join('')+
+    (supps.length?`<div style="display:flex;gap:8px;padding:6px 0 0;align-items:center;flex-wrap:wrap"><span class="meta" style="margin:0">💊 补剂</span>${supps.map(s=>`<span style="padding:2px 10px;border:1px solid var(--accent);border-radius:20px;font-size:12px;color:var(--accent)">${esc(s)}</span>`).join('')}</div>`:'');
 }
 
 /* ============ 运动 ============ */
@@ -1635,20 +1639,32 @@ function miniBars(vals,max,color){
 }
 /* ============ 补剂打卡 ============ */
 const SUPPS=['VB','VC','锌','钙片','铁','VD','鱼油','镁'];
-function todaySupps(){const d=S.day[todayStr()];return(d&&Array.isArray(d.supp))?d.supp:[];}
-function toggleSupp(n){
-  const t=todayStr();
-  if(!S.day[t])S.day[t]={mood:'',fatigue:0,diary:''};
-  if(!Array.isArray(S.day[t].supp))S.day[t].supp=[];
-  const list=S.day[t].supp;
+function suppsOf(ds){const d=S.day[ds];return(d&&Array.isArray(d.supp))?d.supp.slice():[];}
+function todaySupps(){return suppsOf(todayStr());}
+function toggleSuppFor(ds,n){
+  if(!S.day[ds])S.day[ds]={mood:'',fatigue:0,diary:''};
+  if(!Array.isArray(S.day[ds].supp))S.day[ds].supp=[];
+  const list=S.day[ds].supp;
   const i=list.indexOf(n);
   if(i>=0){list.splice(i,1);}
   else{
     if(n==='铁'||n==='钙片'){const other=(n==='铁')?'钙片':'铁';const j=list.indexOf(other);if(j>=0)list.splice(j,1);}
     list.push(n);
   }
-  S.day[t].supp=list;S.day[t].sample=0;
-  save(K.day,S.day);renderOverview();
+  S.day[ds].supp=list;S.day[ds].sample=0;
+  save(K.day,S.day);
+  renderOverview();renderDietSupps();
+  const el=document.getElementById('dietMonthDetail');
+  if(el&&dietEditDate===ds)dietDayDetail(ds);
+}
+function toggleSupp(n){toggleSuppFor(todayStr(),n);}
+function renderDietSupps(){
+  const el=document.getElementById('dietSupps');
+  if(!el)return;
+  const t=dietEditDate||todayStr();
+  const supps=suppsOf(t);
+  const chips=SUPPS.map(n=>`<div class="supp ${supps.includes(n)?'on':''}" onclick="toggleSuppFor('${t}','${n}')" title="点击打卡${(n==='铁'||n==='钙片')?'（铁/钙片一天二选一）':''}">${n}</div>`).join('');
+  el.innerHTML=`<div class="hint" style="margin:14px 0 6px">${dietEditDate?t+' 补录补剂':'今日补剂'} <span style="font-weight:400">${supps.length}/${SUPPS.length}</span><span style="font-weight:400;opacity:.7"> · 铁与钙片二选一</span></div><div class="supp-row">${chips}</div>`;
 }
 function renderOverview(){
   const t=todayStr();
@@ -1782,7 +1798,7 @@ function renderDietBanner(){
     const isToday=dietEditDate===todayStr();
     el.innerHTML=`<div style="background:var(--accentSoft);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
       <span style="font-size:20px">📅</span>
-      <span style="flex:1;font-size:14px">正在为 <b>${dietEditDate}</b> ${isToday?'(今天)':'补录'} 饮食，输入后将记录到此日期</span>
+      <span style="flex:1;font-size:14px">正在为 <b>${dietEditDate}</b> ${isToday?'(今天)':'补录'} 饮食，输入的餐食和补剂打卡都将记录到此日期</span>
       <button class="btn sm" onclick="exitDietEdit()">退出补录</button>
     </div>`;
     el.style.display='block';

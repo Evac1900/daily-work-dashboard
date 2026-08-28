@@ -281,6 +281,13 @@ if('serviceWorker' in navigator){
   .ov-card .ot{font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--sub);margin-bottom:10px;display:flex;justify-content:space-between;}
   .ov-card .big{font-family:var(--serif);font-size:32px;font-weight:700;line-height:1.1;}
   .ov-card .sub{font-size:13px;color:var(--sub);margin-top:4px;}
+  /* 补剂打卡 */
+  .supp-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;}
+  .supp{padding:5px 13px;border:1px solid var(--line);border-radius:30px;font-size:12.5px;line-height:1.4;cursor:pointer;background:transparent;color:var(--sub);user-select:none;transition:.12s;font-family:inherit;}
+  .supp:hover{border-color:var(--accent);}
+  .supp.on{background:var(--accent);color:#fff;border-color:var(--accent);font-weight:600;}
+  .supp.on::after{content:" ✓";}
+  .supp.opp{position:relative;}
   .banner{margin-bottom:16px;padding:14px 18px;border-radius:16px;background:var(--accent-soft);color:#7a4a28;font-size:14px;display:none;}
   .banner.show{display:block;}
   /* 底部Tab */
@@ -1626,6 +1633,23 @@ function miniBars(vals,max,color){
   let b='';vals.forEach((v,i)=>{const h=Math.round(v/max*40);b+=`<rect x="${i*14+4}" y="${42-h}" width="10" height="${h}" rx="2" fill="${v>0?color:'#ece5d8'}"/>`;});
   return `<svg width="106" height="50" viewBox="0 0 106 50">${b}</svg>`;
 }
+/* ============ 补剂打卡 ============ */
+const SUPPS=['VB','VC','锌','钙片','铁','VD','鱼油','镁'];
+function todaySupps(){const d=S.day[todayStr()];return(d&&Array.isArray(d.supp))?d.supp:[];}
+function toggleSupp(n){
+  const t=todayStr();
+  if(!S.day[t])S.day[t]={mood:'',fatigue:0,diary:''};
+  if(!Array.isArray(S.day[t].supp))S.day[t].supp=[];
+  const list=S.day[t].supp;
+  const i=list.indexOf(n);
+  if(i>=0){list.splice(i,1);}
+  else{
+    if(n==='铁'||n==='钙片'){const other=(n==='铁')?'钙片':'铁';const j=list.indexOf(other);if(j>=0)list.splice(j,1);}
+    list.push(n);
+  }
+  S.day[t].supp=list;S.day[t].sample=0;
+  save(K.day,S.day);renderOverview();
+}
 function renderOverview(){
   const t=todayStr();
   const activeToday=S.tasks.filter(x=>x.startDate&&x.endDate&&x.startDate<=t&&x.endDate>=t);
@@ -1637,14 +1661,14 @@ function renderOverview(){
   const day=S.day[t]||{};
   const watching=S.media.filter(m=>m.status==='在看').slice(0,3);
   const wNames=watching.length?watching.map(m=>esc(m.name).slice(0,8)).join(' · '):'—';
+  const supps=todaySupps();
+  const suppChips=SUPPS.map(n=>`<div class="supp ${supps.includes(n)?'on':''}" onclick="toggleSupp('${n}')" title="点击打卡${(n==='铁'||n==='钙片')?'（铁/钙片一天二选一）':''}">${n}</div>`).join('');
   document.getElementById('ovRow').innerHTML=`
     <div style="flex:1;min-width:80px;cursor:pointer" onclick="switchTab('today')"><div class="hint" style="margin:0">日程</div><b style="font-size:22px;font-family:var(--serif)">${doneToday}/${total}</b></div>
     <div style="flex:1;min-width:80px;cursor:pointer" onclick="switchTab('diet')"><div class="hint" style="margin:0">今日饮食</div><b style="font-size:22px;font-family:var(--serif)">${dK}<small style="font-size:12px">kcal</small></b><span style="margin-left:10px;color:#d12945;font-size:13px;font-weight:600">${Math.round(dP*10)/10}g</span></div>
     <div style="flex:1;min-width:90px;cursor:pointer" onclick="openMoodModal()"><div class="hint" style="margin:0">心情</div><b style="font-size:22px;font-family:var(--serif);margin-right:8px">${day.mood||''}</b><span class="hint" style="margin:0 0 0 10px">${day.fatigue?['','轻松','较轻','一般','偏累','很累'][day.fatigue]:''}</span></div>
-    <div style="flex:2;min-width:120px;cursor:pointer" onclick="switchTab('media')"><div class="hint" style="margin:0">最近在读/看</div><b style="font-size:14px">${wNames}</b></div>
-    <div style="display:flex;align-items:center;gap:6px">
-      <span id="mSyncDot" style="width:9px;height:9px;border-radius:50%;background:var(--line);flex:0 0 9px" title="同步状态"></span>
-      <button class="btn sm" onclick="openDrawer()" style="height:36px;min-height:36px;padding:0 10px;font-size:12px">设置</button></div>`;
+    <div style="flex:2.5;min-width:260px"><div class="hint" style="margin:0 0 6px">今日补剂 <span style="font-weight:400">${supps.length}/${SUPPS.length}</span><span style="font-weight:400;opacity:.7"> · 铁与钙片二选一</span></div><div class="supp-row">${suppChips}</div></div>
+    <div style="flex:2;min-width:120px;cursor:pointer" onclick="switchTab('media')"><div class="hint" style="margin:0">最近在读/看</div><b style="font-size:14px">${wNames}</b></div>`;
 }
 
 /* ============ 健康追踪 ============ */

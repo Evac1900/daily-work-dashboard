@@ -483,7 +483,7 @@ if('serviceWorker' in navigator){
           <button class="btn accent" onclick="calcFood()">计算</button>
         </div>
         <div class="res" id="resBox" style="display:none"></div>
-        <div class="hint" id="foodStatus">支持一次输入多种食物，自动识别并合计热量与蛋白质。填了 AI Key 则用 AI 估算，否则用内置食物库（推荐 硅基流动/智谱，国内可访问）。</div>
+        <div class="hint" id="foodStatus">份量按量词自动换算：克/斤/两直接取重，<b>两个鸡蛋=100g、一碗米饭≈150g、1杯牛奶≈250g、1个苹果≈200g</b>，没写份量的按常见一份估算。填了 AI Key 用 AI 估算（更准），否则用内置食物库。</div>
         <div id="dietStat"></div>
         <div class="hint"><span id="dietDateLabel">今日累计</span>：<b id="dietTotal">0</b> / <span id="targetKcal">1800</span> kcal · 蛋白质 <b id="dietProt">0</b> g</div>
         <ul class="list" id="dietList"></ul>
@@ -659,6 +659,17 @@ if('serviceWorker' in navigator){
   </div>
   <div class="field"><label>多设备同步<span class="hint" style="margin:0">（电脑点同步后复制上面显示的码，手机粘贴到下面点连接）</span></label>
     <div class="row" style="margin:0"><input id="syncShow" readonly style="font-size:11px;font-family:monospace;flex:1" onclick="this.select()"><input id="syncInput" placeholder="粘贴其他设备的同步码" style="font-size:11px;flex:1"><button class="btn sm" onclick="connectSync()">连接</button></div></div>
+  <div class="field" style="border-top:1px solid var(--line);padding-top:12px;margin-top:12px"><label>GitHub 同步<span class="hint" style="margin:0">（推荐，比云同步码稳。所有设备填同一仓库/令牌/密码即可）</span></label>
+    <div class="row" style="margin:0 0 6px"><input id="ghRepo" placeholder="仓库 owner/repo" style="font-size:11px;flex:1.3"><input id="ghPath" placeholder="data/sync.json" style="font-size:11px;flex:1"></div>
+    <input id="ghToken" type="password" placeholder="GitHub 令牌（PAT，需 Contents 读写权限）" style="font-size:11px;width:100%;box-sizing:border-box;margin-bottom:6px">
+    <input id="ghPass" type="password" placeholder="同步密码（加密用，所有设备填同一个）" style="font-size:11px;width:100%;box-sizing:border-box;margin-bottom:6px">
+    <div class="row" style="margin:0">
+      <button class="btn sm" style="flex:1" onclick="ghTest()">连接测试</button>
+      <button class="btn sm" style="flex:1" onclick="ghPush()">推送云端</button>
+      <button class="btn sm" style="flex:1" onclick="ghPull()">拉取云端</button>
+    </div>
+    <p class="hint" id="ghStatus" style="margin-top:6px">令牌在 GitHub → Settings → Developer settings → Personal access tokens（Fine-grained，只选本仓库 Contents 读写）创建。</p>
+  </div>
   <button class="btn wide" style="margin-bottom:10px" onclick="clearSample()">清空示例数据</button>
   <button class="btn danger wide" onclick="clearAll()">清空全部数据</button>
   <p class="hint" style="margin-top:14px">饮食热量/蛋白质为估算值，非医疗建议。</p>
@@ -1028,13 +1039,11 @@ function parseMeal(text){
   for(const tok of tokens){
     const f=matchFood(tok);
     if(!f){items.push({name:tok,kcal:0,protein:0,unmatched:true});continue;}
-    let grams=f.portion;
-    const m=tok.match(/(\d+(?:\.\d+)?)\s*(克|g|G|毫升|ml|ML|两|碗|份|杯|块|串|片|根|个|瓶|袋|只|枚|大|小)/);
-    if(m){const n=parseFloat(m[1]);const u=m[2];
-      if(['克','g','G','毫升','ml','ML'].includes(u))grams=n;
-      else if(u==='两')grams=n*50;
-      else grams=n*(UNIT[u]||f.portion);
-    }
+    // 份量换算交给 parseMeasures（支持 两个/半斤/三两/2个/150ml/一碗…，命中食物库时按该食物单个常见份量）
+    let grams=null;
+    const pms=parseMeasures(tok);
+    if(pms.length)grams=Math.round(pms.reduce((s,x)=>s+x.grams,0));
+    if(!grams)grams=f.portion;
     const kcal=Math.round(grams/100*f.k);
     const prot=Math.round(grams/100*f.p2*10)/10;
     items.push({name:f.n,grams:Math.round(grams),kcal,protein:prot,kcal100:f.k,prot100:f.p2});
@@ -1043,18 +1052,116 @@ function parseMeal(text){
 }
 
 /* ============ AI 饮食估算（DeepSeek / 智谱，可选） ============ */
-/* 从用户输入中提取明确的数量词，增强 AI 按实际份量计算 */
+/* 量词→克数由本地代码确定性换算（支持 两个/半斤/三两/2个/150ml/一碗…），AI 只估营养密度，
+   并用换算结果修正 AI 返回的份量，杜绝"一律按100g" */
+
+/* 中文数字转数值：一~九、十、百内组合、半 */
+function cn2num(s){
+  if(s==null)return NaN;
+  if(/^[零一二两三四五六七八九十半]$/.test(s))return {零:0,一:1,二:2,两:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9,十:10,半:.5}[s];
+  const d={零:0,一:1,二:2,两:2,三:3,四:4,五:5,六:6,七:7,八:8,九:9};
+  let total=0,cur=0;
+  for(const c of s){
+    if(c==='十'){total+=(cur||1)*10;cur=0;}
+    else{const v=d[c];if(v===undefined)return NaN;cur=v;}
+  }
+  return total+cur;
+}
+/* 在文本 i 处向前抓量词前的数量词（阿拉伯或中文，含"半"），返回 {txt,val} */
+function numBefore(text,i){
+  let j=i,txt='';
+  while(j>0&&i-j<4){const c=text[j-1];
+    if(/[0-9.]/.test(c)||/^[一二两三四五六七八九十半]$/.test(c)){txt=c+txt;j--;}else break;}
+  if(!txt||txt==='.')return null;
+  let val;
+  if(/[0-9]/.test(txt))val=parseFloat(txt);else val=cn2num(txt);
+  if(!(val>0))return null;
+  return {txt,val};
+}
+/* 解析文本里的所有份量短语 → [{start,end,count,unit,food,bestAlias,grams}]；
+   food 命中内置库时按该食物"单个常见份量"换算（如 鸡蛋1个≈50g、苹果1个≈200g、可乐1瓶≈330g） */
+function parseMeasures(text){
+  if(!text)return [];
+  const out=[];
+  const re=/(千克|公斤|毫升|kg|KG|ml|ML|斤|两|升|克|g|G|个|只|枚|颗|粒|根|条|碗|份|杯|盘|碟|瓶|罐|盒|袋|包|片|块|串|瓣|把|勺|支|听|筒|扎)/g;
+  let m;
+  while((m=re.exec(text))){
+    const unit=m[1],u0=m.index,u1=re.lastIndex;
+    // "两"仅在紧邻前一字为数词时才是重量单位（三两）；"两碗"里的"两"是数词2，留给后面单位处理
+    if(unit==='两'){const pre=text[u0-1];if(!pre||!/^[一二两三四五六七八九十0-9]$/.test(pre))continue;}
+    const nb=numBefore(text,u0);
+    if(!nb)continue;
+    // 在量词前后小窗口里找食物：取与该量词"字距最近"的别名（避免隔着别的量词误配，如"鸡蛋和一碗粥"的碗→粥）
+    let best=null,bestGap=1e9;
+    const pre=text.slice(Math.max(0,u0-6),u0),post=text.slice(u1,Math.min(text.length,u1+6));
+    for(const f of FOODS){for(const al of f[4]){
+      let gap=-1;
+      const pi=pre.lastIndexOf(al);
+      if(pi>-1)gap=(pre.length-(pi+al.length));            // 食物在量词前：与量词的间隔字符数
+      const qi=post.indexOf(al);
+      if(qi>-1&&(gap<0||qi<gap))gap=qi;                     // 食物在量词后
+      if(gap>=0&&(gap<bestGap||(gap===bestGap&&!best))){best={food:f,bestAlias:al};bestGap=gap;}
+    }}
+    const food=best?best.food:null,bestAlias=best?best.bestAlias:'';
+    let grams;
+    if(['克','g','G'].includes(unit)||['毫升','ml','ML'].includes(unit))grams=nb.val;           // ml≈g
+    else if(unit==='升')grams=nb.val*1000;
+    else if(['千克','公斤','kg','KG'].includes(unit))grams=nb.val*1000;
+    else if(unit==='斤')grams=nb.val*500;
+    else if(unit==='两')grams=nb.val*50;
+    else if(food)grams=nb.val*(food[3]||100);
+    else grams=nb.val*(UNIT[unit]||80);
+    out.push({start:u0,end:u1,count:nb.val,unit,food,bestAlias,grams:Math.max(1,Math.round(grams))});
+  }
+  // 合并同一食物紧邻的多次份量（如"一斤二两牛肉"→600g）
+  out.sort((a,b)=>a.start-b.start);
+  const merged=[];
+  for(const x of out){
+    const last=merged[merged.length-1];
+    if(last&&last.food===x.food&&x.start-last.end<=3){last.grams+=x.grams;last.end=Math.max(last.end,x.end);last.count+=x.count;}
+    else merged.push(Object.assign({},x));
+  }
+  return merged;
+}
+/* 追加给 AI 的权威份量清单 */
 function qtyHint(text){
-  const m=text.match(/\d+(?:\.\d+)?\s*(?:克|g|G|毫升|ml|ML|个|只|碗|份|杯|片|块|根|颗|粒|枚|斤|两|kg|KG)|半斤|一斤|两斤|二两|三两|半碗|一碗|半杯|一杯|一勺|两勺|半勺/g);
-  return (m&&m.length)?'\n\n【用户已明确给出的份量】'+m.join('、')+'。务必按这些实际份量计算每项热量与蛋白质总量，并在每项的grams字段填写对应实际克数；若某项未写明份量，默认100g。':'';
+  const ms=parseMeasures(text);
+  if(!ms.length)return '';
+  return '\n\n【份量清单】下面每项克数已按你输入的数量词换算好，是权威实际份量，必须严格执行：\n'
+    +ms.map(x=>' - '+(x.bestAlias||'食物')+'：'+x.grams+'克'+(x.count!==1?'（'+x.count+x.unit+'）':'')).join('\n');
+}
+/* 归一化 AI 返回明细：份量以本地换算为准；AI 数值按每100g密度等比修正，避免100g默认坑 */
+function normAIItems(d,text){
+  const ms=parseMeasures(text);
+  const src=(d.items||[]);
+  if(!src.length)return null;
+  return src.map(it=>{
+    const raw=String(it.name||'');
+    const nm=raw.replace(/[（(【\[]?\s*[0-9一二两三四五六七八九十半.]+(?:个|只|枚|颗|粒|根|条|碗|份|杯|瓶|盒|袋|包|片|块|串|瓣|把|勺|克|g|G|斤|两|ml|ML|毫升)\s*[）)】\]]?/g,'').trim()||'食物';
+    let a=null;
+    for(const x of ms){const key=x.bestAlias;if(key&&(nm.indexOf(key)>-1||key.indexOf(nm)>-1)&&(!a||key.length>a.bestAlias.length))a=x;}
+    // AI 是否给出克数：给了才有密度可推；没给则按其数值即为该份量总量（本地默认100g兜底）
+    const gRaw=it.grams!=null?it.grams:(it.amount_g!=null?it.amount_g:it.amount);
+    let hasG=false,g0=100;
+    if(gRaw!=null){const gv=parseFloat(gRaw);if(isFinite(gv)&&gv>0){g0=gv;hasG=true;}}
+    const k0=Math.round(parseFloat(it.kcal)||0);
+    const p0=Math.round((parseFloat(it.protein_g)||0)*10)/10;
+    const grams=a?a.grams:Math.round(g0);
+    let kcal100,protein100;
+    if(hasG){kcal100=Math.round(k0/g0*100);protein100=Math.round(p0/g0*1000)/10;}
+    else{kcal100=k0;protein100=p0;}
+    const kcal=Math.round(kcal100*grams/100);
+    const protein=Math.round(protein100*grams/100*10)/10;
+    return {name:nm,grams,kcal,protein,kcal100,prot100:protein100};
+  });
 }
 async function aiEstimate(text){
   if(!S.set.aiKey)return null;
   const key=S.set.aiKey.trim();
-  const system='你是营养估算助手。必须严格按照用户输入中写明的【实际份量/数量】计算热量(kcal)与蛋白质(g)，禁止默认按100g估算。'
-  +'规则：1)若用户写了份量（如"200g鸡胸肉"、"1碗米饭"、"2个鸡蛋"、"半斤牛肉"、"150ml牛奶"），kcal和protein_g必须是该实际份量的总量，grams填对应实际克数；'
-  +'2)若用户没有写明份量，则默认按100g估算，grams填100；3)不知道具体克数时可合理换算（1碗米饭≈150g、1个鸡蛋≈50g、1个苹果≈200g、1杯≈250ml等）。'
-  +'只返回纯JSON，不要解释：{"items":[{"name":"食物名","grams":实际克数,"kcal":该份量总热量,"protein_g":该份量蛋白质}],"total_kcal":合计,"total_protein_g":合计蛋白质}';
+  const system='你是营养估算助手。用户输入末尾若带【份量清单】，其中"食物名：X克"是已换算好的权威实际份量，必须严格执行：kcal与protein_g必须是该份量(X克)的总量，grams字段填X。'
+  +'若某食物没出现在份量清单里：1)用户写了数量/量词（如"两个鸡蛋""1碗米饭""半斤牛肉""150ml牛奶""三两面"）时，先换算成克再算总量（参考：1个鸡蛋≈55g、1个苹果≈200g、1根香蕉≈120g、1碗米饭≈150g、1杯≈250ml、1两=50g、1斤=500g、液体1ml≈1g）；'
+  +'2)用户完全没写份量时，按"常见一份"估算总量，禁止一律按100g（一个苹果≈200g、一个鸡蛋≈55g、一碗面≈250g、一碟菜≈150g、一块肉≈100g）。'
+  +'每个食物只返回一项。只返回纯JSON：{"items":[{"name":"食物名","grams":该份量克数,"kcal":该份量总热量,"protein_g":该份量蛋白质}],"total_kcal":合计,"total_protein_g":合计}';
   // 按 key 格式判断供应商：智谱 key 形如 xxxxx.xxxxx（含点号），DeepSeek key 以 sk- 开头
   const isZhipu=key.includes('.');
   const isDeepSeek=/^sk-[A-Za-z0-9]/.test(key)&&!key.includes('.');
@@ -1086,8 +1193,12 @@ async function aiEstimate(text){
     const c=j.choices[0].message.content;
     const m=c.match(/\{[\s\S]*\}/);if(!m)throw new Error('AI返回格式异常: '+c.slice(0,80));
     const d=JSON.parse(m[0]);
-    const res=(d.items||[]).map(it=>({name:it.name,grams:Math.max(1,Math.round(it.grams||it.amount_g||it.amount||100)),kcal:Math.round(it.kcal||0),protein:Math.round((it.protein_g||0)*10)/10}))
-      .concat([{_total:true,kcal:Math.round(d.total_kcal||0),protein:Math.round((d.total_protein_g||0)*10)/10}]);
+    // 本地换算份量优先 + 密度等比修正；总量本地重算保证与展示克数一致（不轻信 AI 自报总量）
+    const items=normAIItems(d,text);
+    if(!items)throw new Error('AI未返回明细: '+c.slice(0,80));
+    const tK=items.reduce((s,i)=>s+i.kcal,0);
+    const tP=Math.round(items.reduce((s,i)=>s+i.protein,0)*10)/10;
+    const res=items.concat([{_total:true,kcal:tK,protein:tP}]);
     res._src=lastName||'AI';
     return res;
   }catch(e){return {err:e.message};}
@@ -2028,7 +2139,7 @@ function clearAll(){
   S.diet=[];S.ex=[];S.tasks=[];S.notes=[];S.media=[];S.health=[];S.day={};S.flags={exercise:null,diet:null,news:null};S.reviews=[];S.revcats=[];
   renderAll();alert('已清空');
 }
-function openDrawer(){document.getElementById('setTarget').value=S.set.target;document.getElementById('setExGoal').value=S.set.exGoal;document.getElementById('setAIKey').value=S.set.aiKey||'';document.getElementById('syncShow').value=localStorage.getItem(CLOUD_KEY)||'(未同步)';renderThemes();document.getElementById('mask').classList.add('show');document.getElementById('drawer').classList.add('show');}
+function openDrawer(){document.getElementById('setTarget').value=S.set.target;document.getElementById('setExGoal').value=S.set.exGoal;document.getElementById('setAIKey').value=S.set.aiKey||'';document.getElementById('syncShow').value=localStorage.getItem(CLOUD_KEY)||'(未同步)';document.getElementById('ghRepo').value=localStorage.getItem(GH_K.repo)||GH_DEF.repo;document.getElementById('ghPath').value=localStorage.getItem(GH_K.path)||GH_DEF.path;document.getElementById('ghToken').value=localStorage.getItem(GH_K.token)||'';document.getElementById('ghPass').value=localStorage.getItem(GH_K.pass)||'';const _gl=localStorage.getItem(GH_K.last);if(_gl)ghStatus('上次同步：'+_gl,'var(--sub)');renderThemes();document.getElementById('mask').classList.add('show');document.getElementById('drawer').classList.add('show');}
 function connectSync(){const code=document.getElementById('syncInput').value.trim();if(!code)return;localStorage.setItem(CLOUD_KEY,code);localStorage.setItem(CLOUD_VER,'0');document.getElementById('syncShow').value=code;document.getElementById('syncInput').value='';cloudPull();alert('已连接，正在同步…');}
 function closeDrawer(){document.getElementById('mask').classList.remove('show');document.getElementById('drawer').classList.remove('show');}
 function saveSettings(){S.set.target=parseInt(document.getElementById('setTarget').value)||1800;S.set.exGoal=parseInt(document.getElementById('setExGoal').value)||30;S.set.aiKey=document.getElementById('setAIKey').value.trim();save(K.set,S.set);closeDrawer();renderDiet();renderOverview();alert('设置已保存');}
@@ -2125,6 +2236,69 @@ function setSyncDot(s){
 }
 let _ap=null;function autoPush(){clearTimeout(_ap);_ap=setTimeout(cloudPush,2000);}
 
+/* ============ GitHub 同步(加密) ============ */
+const GH_K={repo:'wb_gh_repo',path:'wb_gh_path',token:'wb_gh_token',pass:'wb_gh_pass',ver:'wb_gh_ver',last:'wb_gh_last'};
+const GH_DEF={repo:'Evac1900/daily-work-dashboard',path:'data/sync.json'};
+function ghCfg(){return{repo:localStorage.getItem(GH_K.repo)||GH_DEF.repo,path:localStorage.getItem(GH_K.path)||GH_DEF.path,token:localStorage.getItem(GH_K.token)||'',pass:localStorage.getItem(GH_K.pass)||''};}
+function ghSaveCfg(){const _c=ghCfg();const r=document.getElementById('ghRepo').value.trim()||GH_DEF.repo;const p=document.getElementById('ghPath').value.trim()||GH_DEF.path;const t=document.getElementById('ghToken').value.trim();const ps=document.getElementById('ghPass').value;localStorage.setItem(GH_K.repo,r);localStorage.setItem(GH_K.path,p);if(t)localStorage.setItem(GH_K.token,t);else localStorage.removeItem(GH_K.token);if(ps)localStorage.setItem(GH_K.pass,ps);else localStorage.removeItem(GH_K.pass);_c.repo=r;_c.path=p;_c.token=t||'';_c.pass=ps||'';return _c;}
+function ghReady(){const _c=ghCfg();return !!(_c.token&&_c.pass);}
+function ghStatus(msg,color){const el=document.getElementById('ghStatus');if(el){el.textContent=msg;el.style.color=color||'var(--sub)';}}
+function ghB64(buf){const u=new Uint8Array(buf);let s='';const C=0x8000;for(let i=0;i<u.length;i+=C)s+=String.fromCharCode.apply(null,u.subarray(i,i+C));return btoa(s);}
+function ghB64u(b64){const s=atob(b64);const u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);return u;}
+async function ghKey(pass,salt){const km=await crypto.subtle.importKey('raw',new TextEncoder().encode(pass),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:100000,hash:'SHA-256'},km,{name:'AES-GCM',length:256},false,['encrypt','decrypt']);}
+async function ghEncrypt(obj,pass){const salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12));const k=await ghKey(pass,salt);const ct=await crypto.subtle.encrypt({name:'AES-GCM',iv},k,new TextEncoder().encode(JSON.stringify(obj)));return JSON.stringify({v:1,salt:ghB64(salt),iv:ghB64(iv),data:ghB64(ct)});}
+async function ghDecrypt(text,pass){const o=JSON.parse(text);const k=await ghKey(pass,ghB64u(o.salt));const pt=await crypto.subtle.decrypt({name:'AES-GCM',iv:ghB64u(o.iv)},k,ghB64u(o.data));return JSON.parse(new TextDecoder().decode(pt));}
+async function ghApi(path,method,body){const c=ghCfg();const opts={method:method||'GET',headers:{Authorization:'Bearer '+c.token,Accept:'application/vnd.github+json'}};if(body){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}const r=await fetch('https://api.github.com/repos/'+c.repo+'/contents/'+path,opts);if(!r.ok&&r.status!==404){let m='HTTP '+r.status;try{const j=await r.json();m=j.message||m;}catch(e){}throw new Error(m);}return r;}
+async function ghGetRemote(){const c=ghCfg();const r=await ghApi(c.path);if(r.status===404)return null;return r.json();}
+async function ghTest(){
+  if(!ghSaveCfg().token){ghStatus('请先填写 GitHub 令牌','var(--red)');return;}
+  ghStatus('测试中…','var(--amber)');
+  try{const m=await ghGetRemote();ghStatus(m?('连接成功，云端已有同步文件（'+m.sha.slice(0,7)+'）'):'连接成功，云端暂无同步文件，点「推送云端」创建','var(--sage)');}
+  catch(e){ghStatus('连接失败：'+e.message,'var(--red)');}
+}
+async function ghPush(){
+  const c=ghSaveCfg();
+  if(!c.token||!c.pass){ghStatus('请先填写令牌和同步密码','var(--red)');return;}
+  ghStatus('加密并推送中…','var(--amber)');
+  try{
+    const payload=cloudPayload();
+    payload.ver=parseInt(localStorage.getItem(GH_K.ver)||'0')+1;
+    const enc=await ghEncrypt(payload,c.pass);
+    const remote=await ghGetRemote();
+    const body={message:'daily sync '+new Date().toISOString().slice(0,10),content:ghB64(new TextEncoder().encode(enc))};
+    if(remote)body.sha=remote.sha;
+    const r=await ghApi(c.path,'PUT',body);
+    if(!r.ok){let m='HTTP '+r.status;try{const j=await r.json();m=j.message||m;}catch(e){}throw new Error(m);}
+    localStorage.setItem(GH_K.ver,String(payload.ver));localStorage.setItem(GH_K.last,new Date().toLocaleString());
+    ghStatus('已推送 ✓ '+new Date().toLocaleTimeString(),'var(--sage)');
+  }catch(e){ghStatus('推送失败：'+e.message,'var(--red)');}
+}
+async function ghPull(){
+  const c=ghSaveCfg();
+  if(!c.token||!c.pass){ghStatus('请先填写令牌和同步密码','var(--red)');return;}
+  ghStatus('拉取中…','var(--amber)');
+  try{
+    const remote=await ghGetRemote();
+    if(!remote){ghStatus('云端暂无同步文件，可点「推送云端」上传','var(--amber)');return;}
+    const raw=new TextDecoder().decode(ghB64u(remote.content));
+    const d=await ghDecrypt(raw,c.pass);
+    if(!d||!d.ver)throw new Error('云端文件格式不对');
+    const lv=parseInt(localStorage.getItem(GH_K.ver)||'0');
+    if(d.ver>lv||!S.tasks.length){
+      if(d.diet)S.diet=d.diet;if(d.ex)S.ex=d.ex;if(d.tasks)S.tasks=d.tasks;
+      if(d.notes)S.notes=d.notes;if(d.media)S.media=d.media;if(d.health)S.health=d.health;
+      if(d.day)S.day=d.day;if(d.flags)S.flags=d.flags;
+      if(d.reviews)S.reviews=d.reviews;if(d.revcats)S.revcats=d.revcats;
+      save(K.diet,S.diet);save(K.ex,S.ex);save(K.tasks,S.tasks);save(K.notes,S.notes);
+      save(K.media,S.media);save(K.health,S.health);save(K.day,S.day);save(K.flags,S.flags);save(K.reviews,S.reviews);save(K.revcats,S.revcats);
+      localStorage.setItem(GH_K.ver,String(d.ver));renderAll();
+      ghStatus('已拉取 ✓ '+new Date().toLocaleTimeString(),'var(--sage)');
+    }else{
+      ghStatus('云端不比本地新（本地 ver '+lv+' ≥ 云端 '+d.ver+'），未覆盖','var(--amber)');
+    }
+  }catch(e){const bp=(e&&e.name==='OperationError')||/decrypt|password|pwd|GCM|AES/i.test(e.message||'');ghStatus('拉取失败：'+e.message+(bp?'（同步密码不对？）':''),'var(--red)');}
+}
+
 /* ============ 启动 ============ */
 function checkBanner(){
   const n=S.diet.length+S.ex.length+S.tasks.length+S.notes.length+S.media.length+S.health.length;
@@ -2141,8 +2315,9 @@ function boot(){
   applyTheme(S.set.theme||'mint');
   resetHealthForm();
   renderAll();
-  cloudPull();setTimeout(()=>cloudPush(),3000);
-  setInterval(()=>cloudPush(),300000);
+  if(ghReady()){ghPull().catch(()=>{});}
+  else{cloudPull();setTimeout(()=>cloudPush(),3000);}
+  setInterval(()=>{if(ghReady())ghPush().catch(()=>{});else cloudPush();},300000);
 }
 boot();
 </script>
